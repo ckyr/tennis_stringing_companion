@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>ERT300 Converter</title>
+
+<!-- iOS home screen app tags -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="ERT300" />
+<meta name="theme-color" content="#111827" />
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #ffffff;
+    --bg2: #f3f4f6;
+    --bg3: #e5e7eb;
+    --text: #111827;
+    --text2: #6b7280;
+    --text3: #9ca3af;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.2);
+    --accent: #111827;
+    --radius: 12px;
+    --radius-lg: 16px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1e;
+      --bg2: #2c2c2e;
+      --bg3: #3a3a3c;
+      --text: #f2f2f7;
+      --text2: #aeaeb2;
+      --text3: #636366;
+      --border: rgba(255,255,255,0.1);
+      --border2: rgba(255,255,255,0.2);
+      --accent: #f2f2f7;
+    }
+  }
+
+  html, body {
+    height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+    background: #111827;
+    color: var(--text);
+    -webkit-tap-highlight-color: transparent;
+    overflow: hidden;
+  }
+
+  .shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    max-width: 430px;
+    margin: 0 auto;
+    background: var(--bg);
+  }
+
+  /* Status / nav */
+  .nav {
+    background: #111827;
+    padding: calc(var(--safe-top) + 10px) 1.25rem 14px;
+    flex-shrink: 0;
+  }
+  .nav-title { color: #fff; font-size: 17px; font-weight: 600; }
+  .nav-sub { color: rgba(255,255,255,0.5); font-size: 12px; margin-top: 1px; }
+
+  .tab-bar {
+    display: flex;
+    background: #111827;
+    border-bottom: 0.5px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+  }
+  .tab {
+    flex: 1; padding: 10px 0; text-align: center;
+    font-size: 13px; color: rgba(255,255,255,0.45);
+    cursor: pointer; border-bottom: 2px solid transparent;
+    -webkit-user-select: none; user-select: none;
+  }
+  .tab.active { color: #fff; border-bottom-color: #fff; }
+
+  /* Scrollable content */
+  .view { display: none; flex-direction: column; gap: 1rem; padding: 1.25rem; overflow-y: auto; flex: 1; }
+  .view.active { display: flex; }
+
+  .lbl {
+    font-size: 11px; font-weight: 600; color: var(--text2);
+    letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 8px;
+  }
+
+  /* DT stepper */
+  .dt-row {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--bg2); border-radius: var(--radius-lg);
+    padding: .9rem 1.1rem; border: 0.5px solid var(--border);
+  }
+  .dt-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 0.5px solid var(--border2); background: var(--bg);
+    font-size: 24px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    color: var(--text); flex-shrink: 0; line-height: 1;
+    -webkit-user-select: none; user-select: none;
+  }
+  .dt-btn:active { transform: scale(0.9); }
+  .dt-num { flex: 1; text-align: center; font-size: 48px; font-weight: 300; color: var(--text); line-height: 1; }
+
+  /* Size buttons */
+  .sz-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+  .sz-btn {
+    padding: 10px 4px; border-radius: var(--radius);
+    border: 0.5px solid var(--border2); background: var(--bg2);
+    cursor: pointer; text-align: center;
+    -webkit-user-select: none; user-select: none;
+  }
+  .sz-btn.on { background: #111827; border-color: #111827; }
+  .sz-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .sz-btn.on .sz-name { color: #fff; }
+  .sz-range { font-size: 10px; color: var(--text2); margin-top: 2px; }
+  .sz-btn.on .sz-range { color: rgba(255,255,255,0.55); }
+
+  /* Result card */
+  .res-card { background: #111827; border-radius: var(--radius-lg); padding: 1.1rem 1.25rem; }
+  .res-row { display: flex; justify-content: space-between; align-items: center; }
+  .res-lbl { font-size: 13px; color: rgba(255,255,255,0.5); }
+  .res-val { font-size: 32px; font-weight: 300; color: #fff; }
+  .res-unit { font-size: 14px; color: rgba(255,255,255,0.4); margin-left: 3px; }
+  .res-div { height: 0.5px; background: rgba(255,255,255,0.12); margin: 10px 0; }
+
+  /* Zone pill */
+  .zone-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--bg2); border-radius: var(--radius);
+    padding: 9px 13px; border: 0.5px solid var(--border);
+  }
+  .zone-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .zone-txt { font-size: 13px; font-weight: 600; color: var(--text); }
+  .zone-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+
+  /* Racket cards */
+  .rack-card {
+    background: var(--bg2); border-radius: var(--radius-lg);
+    border: 0.5px solid var(--border); padding: 1rem 1.1rem; margin-bottom: 8px;
+  }
+  .rack-name { font-size: 15px; font-weight: 600; color: var(--text); }
+  .rack-model { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .rack-meta { font-size: 12px; color: var(--text2); margin-top: 3px; }
+  .rack-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 99px;
+    background: var(--bg); border: 0.5px solid var(--border2);
+    color: var(--text2); white-space: nowrap; flex-shrink: 0;
+  }
+  .rack-bar-track { height: 5px; background: var(--bg3); border-radius: 3px; margin-top: 10px; }
+  .rack-bar-fill { height: 5px; border-radius: 3px; transition: width .3s; }
+  .rack-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: 5px; }
+  .rack-pct { font-size: 12px; font-weight: 600; }
+  .rack-warn { font-size: 11px; color: var(--text2); }
+  .rack-divider { height: 0.5px; background: var(--border); margin: 10px 0; }
+  .rack-actions { display: flex; align-items: center; gap: 6px; }
+  .rack-dt-ctrl { display: flex; align-items: center; gap: 5px; flex: 1; }
+  .sm-btn {
+    width: 30px; height: 30px; border-radius: 50%;
+    border: 0.5px solid var(--border2); background: var(--bg);
+    font-size: 18px; cursor: pointer; display: inline-flex;
+    align-items: center; justify-content: center;
+    color: var(--text); flex-shrink: 0; line-height: 1;
+    -webkit-user-select: none; user-select: none;
+  }
+  .sm-btn:active { transform: scale(0.88); }
+  .rack-cur-dt { font-size: 17px; font-weight: 600; min-width: 30px; text-align: center; color: var(--text); }
+  .rack-kg { font-size: 11px; color: var(--text2); margin-left: 4px; }
+  .link-btn { background: none; border: none; cursor: pointer; font-size: 12px; padding: 4px 2px; color: var(--text2); font-family: inherit; }
+  .link-btn.danger { color: #dc2626; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text2); font-size: 14px; line-height: 1.6; }
+
+  /* Bottom add button */
+  .add-btn {
+    width: 100%; padding: 13px; background: #111827; color: #fff;
+    border: none; border-radius: var(--radius-lg); font-size: 15px;
+    font-weight: 600; cursor: pointer; font-family: inherit;
+    margin-top: 4px; margin-bottom: calc(var(--safe-bottom) + 8px);
+    flex-shrink: 0;
+  }
+  .add-btn:active { opacity: 0.85; }
+
+  /* Modal */
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: flex; align-items: flex-end; z-index: 100;
+  }
+  .modal {
+    background: var(--bg); border-radius: 20px 20px 0 0;
+    width: 100%; padding: 1.25rem;
+    padding-bottom: calc(var(--safe-bottom) + 1.25rem);
+    max-height: 88vh; overflow-y: auto;
+  }
+  .modal-handle { width: 36px; height: 4px; background: var(--bg3); border-radius: 2px; margin: 0 auto 1rem; }
+  .modal-title { font-size: 17px; font-weight: 600; color: var(--text); margin-bottom: 1.1rem; }
+  .field { margin-bottom: .9rem; }
+  .field label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; font-weight: 500; }
+  .field input, .field select {
+    width: 100%; padding: 11px 13px;
+    border-radius: var(--radius); border: 0.5px solid var(--border2);
+    background: var(--bg2); font-size: 15px; color: var(--text);
+    font-family: inherit; outline: none;
+    -webkit-appearance: none; appearance: none;
+  }
+  .field input:focus, .field select:focus { border-color: #111827; }
+  .btn-row { display: flex; gap: 8px; margin-top: .75rem; }
+  .btn-pri {
+    flex: 1; padding: 13px; background: #111827; color: #fff;
+    border: none; border-radius: var(--radius-lg); font-size: 15px;
+    font-weight: 600; cursor: pointer; font-family: inherit;
+  }
+  .btn-sec {
+    padding: 13px 20px; background: var(--bg2); color: var(--text);
+    border: 0.5px solid var(--border2); border-radius: var(--radius-lg);
+    font-size: 15px; cursor: pointer; font-family: inherit;
+  }
+  .btn-pri:active, .btn-sec:active { opacity: 0.8; }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <div class="nav">
+    <div class="nav-title">ERT300</div>
+    <div class="nav-sub">String Tension Converter</div>
+  </div>
+  <div class="tab-bar">
+    <div class="tab active" onclick="switchTab('convert')">Converter</div>
+    <div class="tab" onclick="switchTab('rackets')">My Rackets</div>
+  </div>
+
+  <!-- Converter -->
+  <div class="view active" id="tab-convert">
+    <div>
+      <div class="lbl">Dynamic Tension (DT)</div>
+      <div class="dt-row">
+        <button class="dt-btn" id="c-minus">−</button>
+        <div class="dt-num" id="c-dt">38</div>
+        <button class="dt-btn" id="c-plus">+</button>
+      </div>
+    </div>
+    <div>
+      <div class="lbl">Racket head size</div>
+      <div class="sz-grid">
+        <button class="sz-btn" data-size="mid" onclick="pickSize(this)">
+          <div class="sz-name">MID</div><div class="sz-range">83–94 in²</div>
+        </button>
+        <button class="sz-btn on" data-size="midplus" onclick="pickSize(this)">
+          <div class="sz-name">MID+</div><div class="sz-range">95–105 in²</div>
+        </button>
+        <button class="sz-btn" data-size="over" onclick="pickSize(this)">
+          <div class="sz-name">OVER</div><div class="sz-range">106–115 in²</div>
+        </button>
+      </div>
+    </div>
+    <div>
+      <div class="lbl">String tension</div>
+      <div class="res-card">
+        <div class="res-row">
+          <span class="res-lbl">Kilograms</span>
+          <span><span class="res-val" id="c-kg">23.0</span><span class="res-unit">kg</span></span>
+        </div>
+        <div class="res-div"></div>
+        <div class="res-row">
+          <span class="res-lbl">Pounds</span>
+          <span><span class="res-val" id="c-lbs">51</span><span class="res-unit">lbs</span></span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="lbl">Playing style</div>
+      <div class="zone-pill">
+        <div class="zone-dot" id="c-dot"></div>
+        <div>
+          <div class="zone-txt" id="c-zone-txt"></div>
+          <div class="zone-sub" id="c-zone-sub"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rackets -->
+  <div class="view" id="tab-rackets" style="padding-bottom:0;">
+    <div id="rack-list" style="flex:1;overflow-y:auto;"></div>
+    <div style="padding: 0 0 0; flex-shrink:0;">
+      <button class="add-btn" onclick="openModal()">+ Add racket</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" style="display:none;" onclick="overlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Add racket</div>
+    <div class="field"><label>Player / label name</label><input id="m-name" placeholder="e.g. R1" autocomplete="off" /></div>
+    <div class="field"><label>Racket model</label><input id="m-model" placeholder="e.g. Wilson Blade 104 v9" autocomplete="off" /></div>
+    <div class="field"><label>Head size</label>
+      <select id="m-size">
+        <option value="mid">MID (83–94 in²)</option>
+        <option value="midplus" selected>MID+ (95–105 in²)</option>
+        <option value="over">OVER (106–115 in²)</option>
+      </select>
+    </div>
+    <div class="field"><label>Baseline DT (fresh strung)</label><input id="m-dt" type="number" min="20" max="65" placeholder="e.g. 42" /></div>
+    <div class="field"><label>Machine tension used</label><input id="m-tension" placeholder="e.g. 24 kg / 53 lbs" autocomplete="off" /></div>
+    <div class="field"><label>Stringing date</label><input id="m-date" type="date" /></div>
+    <div class="field"><label>String + notes</label><input id="m-notes" placeholder="e.g. Luxilon ALU Power 1.25, full bed" autocomplete="off" /></div>
+    <div class="btn-row">
+      <button class="btn-sec" onclick="closeModal()">Cancel</button>
+      <button class="btn-pri" onclick="saveRacket()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Conversion table (calibrated from disc values) ──────────────────────────
+const TABLE = {
+  over:    [[28,20.5],[32,23.5],[35,25.0],[42,29.5],[47,34.0],[53,39.0]],
+  midplus: [[28,18.5],[32,21.5],[35,23.0],[42,27.5],[47,31.0],[53,36.0]],
+  mid:     [[28,16.5],[32,19.5],[35,21.0],[42,25.5],[47,28.5],[53,33.0]],
+};
+
+function interpolate(dt, size) {
+  const pts = TABLE[size];
+  if (dt <= pts[0][0]) {
+    const [x0,y0]=pts[0],[x1,y1]=pts[1];
+    return y0+(dt-x0)*(y1-y0)/(x1-x0);
+  }
+  if (dt >= pts[pts.length-1][0]) {
+    const n=pts.length;
+    const [x0,y0]=pts[n-2],[x1,y1]=pts[n-1];
+    return y0+(dt-x0)*(y1-y0)/(x1-x0);
+  }
+  for (let i=0;i<pts.length-1;i++) {
+    if (dt>=pts[i][0]&&dt<=pts[i+1][0]) {
+      const [x0,y0]=pts[i],[x1,y1]=pts[i+1];
+      return y0+(dt-x0)*(y1-y0)/(x1-x0);
+    }
+  }
+}
+
+const ZONES = [
+  {min:0,  max:27, lbl:'Below range',           sub:'DT < 28',   col:'#9ca3af'},
+  {min:28, max:34, lbl:'Lo — defensive baseline',sub:'DT 28–34', col:'#059669'},
+  {min:35, max:41, lbl:'Mid — dynamic & offensive',sub:'DT 35–41',col:'#2563eb'},
+  {min:42, max:46, lbl:'Hi — fast & aggressive', sub:'DT 42–46', col:'#d97706'},
+  {min:47, max:99, lbl:'Hi+ — very fast & aggressive',sub:'DT 47–56',col:'#dc2626'},
+];
+function getZone(dt){return ZONES.find(z=>dt>=z.min&&dt<=z.max)||ZONES[ZONES.length-1];}
+
+// ── Converter state ──────────────────────────────────────────────────────────
+let cDT = 38, cSize = 'midplus';
+
+function updateConverter() {
+  const kg = interpolate(cDT, cSize);
+  const kgR = Math.round(kg*10)/10;
+  const lbs = Math.round(kgR*2.2046);
+  document.getElementById('c-dt').textContent = cDT;
+  document.getElementById('c-kg').textContent = kgR.toFixed(1);
+  document.getElementById('c-lbs').textContent = lbs;
+  const z = getZone(cDT);
+  document.getElementById('c-dot').style.background = z.col;
+  document.getElementById('c-zone-txt').textContent = z.lbl;
+  document.getElementById('c-zone-sub').textContent = z.sub;
+}
+
+document.getElementById('c-minus').addEventListener('click', () => { if(cDT>20){cDT--;updateConverter();} });
+document.getElementById('c-plus').addEventListener('click',  () => { if(cDT<65){cDT++;updateConverter();} });
+
+function pickSize(btn) {
+  document.querySelectorAll('.sz-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  cSize = btn.dataset.size;
+  updateConverter();
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach((el,i) =>
+    el.classList.toggle('active', ['convert','rackets'][i]===t));
+  document.getElementById('tab-convert').classList.toggle('active', t==='convert');
+  document.getElementById('tab-rackets').classList.toggle('active', t==='rackets');
+}
+
+// ── Racket storage ────────────────────────────────────────────────────────────
+const STORAGE_KEY = 'ert300_rackets';
+
+function loadRackets() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch(e) { return []; }
+}
+
+function saveRackets(arr) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); }
+  catch(e) { console.warn('localStorage unavailable'); }
+}
+
+let rackets = loadRackets();
+let editIdx = null;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function barColor(pct) {
+  const loss = 100-pct;
+  if (loss>=20) return '#dc2626';
+  if (loss>=10) return '#d97706';
+  return '#059669';
+}
+
+function daysSince(ds) {
+  if (!ds) return null;
+  return Math.floor((new Date()-new Date(ds))/86400000);
+}
+
+// ── Render racket list ────────────────────────────────────────────────────────
+function renderRackets() {
+  const el = document.getElementById('rack-list');
+  if (!rackets.length) {
+    el.innerHTML = '<div class="empty-state">No rackets yet.<br>Tap "+ Add racket" to get started.</div>';
+    return;
+  }
+  el.innerHTML = rackets.map((r,i) => {
+    const curDT = r.currentDT != null ? r.currentDT : r.baseDT;
+    const pct = r.baseDT && curDT ? Math.round((curDT/r.baseDT)*100) : null;
+    const loss = pct != null ? 100-pct : 0;
+    const bc = pct != null ? barColor(pct) : '#9ca3af';
+    const warn = loss>=20 ? '⚠ Restring now' : loss>=10 ? 'Tension dropping' : 'Strings fresh';
+    const days = daysSince(r.date);
+    const daysStr = days===0?'Strung today':days===1?'1 day ago':days!=null?`${days} days ago`:'';
+    const kg = curDT ? interpolate(curDT, r.size) : null;
+    const kgStr = kg ? `${(Math.round(kg*10)/10).toFixed(1)} kg / ${Math.round(kg*2.2046)} lbs` : '—';
+    const sizeLabel = {mid:'MID',midplus:'MID+',over:'OVER'}[r.size];
+    return `<div class="rack-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div class="rack-name">${esc(r.name)}</div>
+          ${r.model?`<div class="rack-model">${esc(r.model)}</div>`:''}
+          <div class="rack-meta">${[r.tension?`Strung at ${esc(r.tension)}`:'',daysStr].filter(Boolean).join(' · ')}</div>
+          ${r.notes?`<div class="rack-meta" style="margin-top:2px;">${esc(r.notes)}</div>`:''}
+        </div>
+        <span class="rack-badge">${sizeLabel}</span>
+      </div>
+      ${r.baseDT?`
+        <div class="rack-bar-track"><div class="rack-bar-fill" style="width:${Math.min(100,pct||0)}%;background:${bc};"></div></div>
+        <div class="rack-bottom">
+          <span class="rack-pct" style="color:${bc};">${pct!=null?pct+'% tension':''}</span>
+          <span class="rack-warn">${warn}</span>
+        </div>`:''}
+      <div class="rack-divider"></div>
+      <div class="rack-actions">
+        <div class="rack-dt-ctrl">
+          <span style="font-size:11px;color:var(--text2);margin-right:2px;">DT</span>
+          <button class="sm-btn" onclick="adjDT(${i},-1)">−</button>
+          <span class="rack-cur-dt">${curDT!=null?curDT:'—'}</span>
+          <button class="sm-btn" onclick="adjDT(${i},1)">+</button>
+          <span class="rack-kg">${kgStr}</span>
+        </div>
+        <button class="link-btn" onclick="editRacket(${i})">edit</button>
+        <button class="link-btn danger" onclick="deleteRacket(${i})">delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function adjDT(i, d) {
+  const cur = rackets[i].currentDT != null ? rackets[i].currentDT : (rackets[i].baseDT || 38);
+  rackets[i].currentDT = Math.min(65, Math.max(20, cur+d));
+  saveRackets(rackets);
+  renderRackets();
+}
+
+function deleteRacket(i) {
+  if (confirm('Remove this racket?')) {
+    rackets.splice(i,1);
+    saveRackets(rackets);
+    renderRackets();
+  }
+}
+
+function editRacket(i) { openModal(i); }
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(idx) {
+  editIdx = (typeof idx==='number') ? idx : null;
+  const r = editIdx !== null ? rackets[editIdx] : null;
+  document.getElementById('modal-title').textContent = r ? 'Edit racket' : 'Add racket';
+  document.getElementById('m-name').value    = r ? r.name    : '';
+  document.getElementById('m-model').value   = r ? r.model   : '';
+  document.getElementById('m-size').value    = r ? r.size    : 'midplus';
+  document.getElementById('m-dt').value      = r && r.baseDT ? r.baseDT : '';
+  document.getElementById('m-tension').value = r ? r.tension : '';
+  document.getElementById('m-date').value    = r ? r.date    : new Date().toISOString().slice(0,10);
+  document.getElementById('m-notes').value   = r ? r.notes   : '';
+  document.getElementById('modal').style.display = 'flex';
+}
+
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+}
+
+function overlayClick(e) {
+  if (e.target === document.getElementById('modal')) closeModal();
+}
+
+function saveRacket() {
+  const name = document.getElementById('m-name').value.trim();
+  if (!name) { document.getElementById('m-name').focus(); return; }
+  const baseDT = parseInt(document.getElementById('m-dt').value) || null;
+  const obj = {
+    name, baseDT,
+    model:   document.getElementById('m-model').value.trim(),
+    size:    document.getElementById('m-size').value,
+    tension: document.getElementById('m-tension').value.trim(),
+    date:    document.getElementById('m-date').value,
+    notes:   document.getElementById('m-notes').value.trim(),
+    currentDT: baseDT,
+  };
+  if (editIdx !== null) {
+    obj.currentDT = rackets[editIdx].currentDT;
+    rackets[editIdx] = obj;
+  } else {
+    rackets.push(obj);
+  }
+  saveRackets(rackets);
+  closeModal();
+  renderRackets();
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+updateConverter();
+renderRackets();
+</script>
+</body>
+</html>
